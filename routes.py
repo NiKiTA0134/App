@@ -5,29 +5,45 @@ from .forms import LoginForm
 from .database import session
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from datetime import datetime
+
 from .db_controls import add_new_item, get_events_by
 from .database import User, Event
-from . import app
+from . import app, login_manager
+
+
+def add_event_to_database(event_data):
+    print(event_data)
+    event_data["user"] = 1
+    event = Event(**event_data)
+    add_new_item(event)
+
+
+def create_response(status_code):
+    response = make_response()
+    response.status_code = status_code
+    return response
 
 
 @app.route("/create_event", methods=["POST"])
 def create_event():
     data_from_request = request.get_json()
-    data_from_request["user"] = current_user.id
-    event = Event(**data_from_request)
-    add_new_item(event)
-    response = make_response()
-    response.status_code = 200
+    print(data_from_request)
+    try:
+        add_event_to_database(data_from_request)
+        response = create_response(200)
+    except Exception as e:
+        print(e)
+        response = create_response(500)
+
     return response
 
 
-@app.route("/get_events_by_date/<date>", methods=["POST"])
+@app.route("/get_events_by_date/<date>", methods=["GET"])
 def get_events_by_date(date):
-    data = {"name": "John", "age": 30}
+    print(date[:10])
+    data = get_events_by(date[:10])
     response = make_response(jsonify(data))
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Methods', 'GET')
-    response.headers.add('Access-Control-Allow-Headers', '*')
     return response
 
 
@@ -82,19 +98,24 @@ def signup():
     return render_template("signup.html")
 
 
-@app.route("/login", methods=["POST", "GET"] )
+@app.route("/login", methods=["POST"])
 def login():
-    form = LoginForm
-    if request.method == "POST":
-        nickname = request.form["nickname"]
-        password = request.form["password"]
+    data_from_request = request.get_json()
 
-        remember = True if request.form.get("remember") else False
+    name = data_from_request["nickname"]
+    password = data_from_request["password"]
 
-        user = session.query(User).where(User.nickname == nickname).first()
-        print(user)
-        print(check_password_hash(user.password, password))
-        if not user or not check_password_hash(user.password, password):
-            return redirect(url_for("login"))
-        return redirect("/main")
-    return render_template("login.html", form=form)
+    user_check = session.query(User).where(User.nickname == name).first()
+
+    if not user_check:
+        print(name, password)
+        response = make_response({"isLogged": False})
+        return response
+
+    if check_password_hash(user_check.password, password):
+        print(name, password)
+        response = make_response
+
+@login_manager.user_loader
+def load_user(user):
+    return session.query(User).get(int(user))

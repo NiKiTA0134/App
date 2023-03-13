@@ -28,8 +28,8 @@ class Event(Base):
     __tablename__ = "events"
 
     id = Column("id", Integer, primary_key=True)
-    date = Column("date", Date)
-    time = Column("time", Time, nullable=True)
+    date = Column("date", String)
+    time = Column("time", String, nullable=True)
     header = Column("header", String(80))
     description = Column("description", String(240), nullable=True)
     user = Column("user", Integer, ForeignKey("users.id"))
