@@ -1,15 +1,11 @@
 from flask import render_template, request, redirect, url_for, make_response, jsonify
-from flask_login import current_user
-
-from .forms import LoginForm
 from .database import session
 from werkzeug.security import check_password_hash, generate_password_hash
-
-from datetime import datetime
-
 from .db_controls import add_new_item, get_events_by
 from .database import User, Event
-from . import app, login_manager
+from . import app
+from datetime import timedelta
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 
 
 def add_event_to_database(event_data):
@@ -67,7 +63,6 @@ def test():
     return render_template("main.html", data=data)
 
 
-
 @app.errorhandler(404)
 @app.errorhandler(500)
 @app.errorhandler(405)
@@ -75,27 +70,22 @@ def handle_error(e):
     return render_template("custom_error.html", error=e.code)
 
 
-@app.route("/signup", methods=["POST", "GET"])
+@app.route("/signup", methods=["GET", "POST"])
 def signup():
+    data_from_request = request.get_json()
+    name = data_from_request["nickname"]
 
-    if request.method == "POST":
+    user_check = session.query(User).where(User.nickname == name).first()
 
-        nickname = request.form["nickname"]
-        email = request.form["email"]
-        password = request.form["password"]
+    if user_check:
+        response = make_response(jsonify({"isRegistered": False, "reason": "userExists"}), 401)
+        return response
 
-        user = session.query(User).where(User.nickname == nickname).first()
-        print(user)
-
-        if user:
-            return redirect(url_for("signup"))
-
-        new_user = User(nickname=nickname, email=email, password=generate_password_hash(password))
-        print(new_user)
-        session.add(new_user)
-        session.commit()
-        session.close()
-    return render_template("signup.html")
+    data_from_request["password"] = generate_password_hash(data_from_request["password"])
+    new_user = User(**data_from_request)
+    add_new_item(new_user)
+    response = make_response(jsonify({"isRegistered": True}), 200)
+    return response
 
 
 @app.route("/login", methods=["POST"])
@@ -114,8 +104,16 @@ def login():
 
     if check_password_hash(user_check.password, password):
         print(name, password)
-        response = make_response
+        token = create_access_token(identity=user_check.id, expires_delta=timedelta(days=30))
+        print(token)
+        response = make_response(jsonify({"isLogged": True, "token": token}), 200)
+        print(response.date)
+        return response
 
-@login_manager.user_loader
-def load_user(user):
-    return session.query(User).get(int(user))
+    response = make_response({"isLogged": False})
+    return response
+
+# @login_manager.user_loader
+# def load_user(user):
+#     return session.query(User).get(int(user))
+

@@ -39,26 +39,38 @@ window.onload = (event) => {
     function loginHandler () {
         const loginForm = document.getElementById("login-form");
         const urlLogin = 'http://127.0.0.1:5000/login';
-        console.log("Login")
+//        console.log(loginForm)
 
-        loginform.addEventListener("submit", (event) => {
+        loginForm.addEventListener("submit", (event) => {
             event.preventDefault();
-            console.log(event)
+//            console.log(event)
 
-            sendRequestToServer(eventForm, urlAddEvent);
+            sendRequestToServer(loginForm, urlLogin)
+            .then(response => {
+                if (response.isLogged) {
+                    location.replace("/index.html")
+                    localStorage.setItem("token", response.token);
+                    console.log(localStorage.getItem("token"));
+                }
+            });
     })
     }
 
     function signupHandler () {
         const signupForm = document.getElementById("signup-form");
         const urlSignup = 'http://127.0.0.1:5000/signup';
-        console.log("Login")
+        console.log("Signup")
 
-        signupform.addEventListener("submit", (event) => {
+        signupForm.addEventListener("submit", (event) => {
             event.preventDefault();
             console.log(event)
 
-            sendRequestToServer(eventForm, urlAddEvent);
+            sendRequestToServer(signupForm, urlSignup)
+            .then(response => {
+                if (response.isRegistered) {
+                    location.replace("/login.html")
+                }
+            });
     })
     }
 
@@ -89,12 +101,12 @@ window.onload = (event) => {
             data[key] = value;
         }
 
-        fetch(url, {
+        return fetch(url, {
             method: "POST",
             headers: {"Content-type": "application/json"},
             body: JSON.stringify(data)
         })
-        .then(data => console.log(data))
+        .then(response => response.json())
         .catch(error => console.error('Помилка:', error));
     }
 }
