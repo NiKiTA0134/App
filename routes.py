@@ -1,7 +1,7 @@
 from flask import render_template, request, redirect, url_for, make_response, jsonify
 from .database import session
 from werkzeug.security import check_password_hash, generate_password_hash
-from .db_controls import add_new_item, get_events_by
+from .db_controls import add_new_item, get_events_by, delete_user
 from .database import User, Event
 from . import app
 from datetime import timedelta
@@ -27,11 +27,12 @@ def create_event():
     print(data_from_request)
     try:
         add_event_to_database(data_from_request)
-        response = create_response(200)
+        response = create_response({"isAdded": True})
+        response.status_code = 200
     except Exception as e:
         print(e)
-        response = create_response(500)
-
+        response = create_response({"isAdded": False, "exception": e})
+        response.status_code = 500
     return response
 
 
@@ -78,7 +79,7 @@ def signup():
     user_check = session.query(User).where(User.nickname == name).first()
 
     if user_check:
-        response = make_response(jsonify({"isRegistered": False, "reason": "userExists"}), 401)
+        response = make_response(jsonify({"isRegistered": False, "reason": "userExists"}), 409)
         return response
 
     data_from_request["password"] = generate_password_hash(data_from_request["password"])
@@ -112,6 +113,23 @@ def login():
 
     response = make_response({"isLogged": False})
     return response
+
+
+@app.route("/delete_user_by/<nickname>")
+def delete_user_by(nickname):
+    try:
+        delete_user(nickname)
+        response_json = {"isDeleted": True}
+        status = 200
+    except:
+        response_json = {"isDeleted": False}
+        status = 500
+
+    response = make_response(response_json, status)
+    return response
+
+
+
 
 # @login_manager.user_loader
 # def load_user(user):

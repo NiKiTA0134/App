@@ -33,3 +33,7 @@ def get_events_by(date):
     for event in events:
         jsonified_events.append(create_json_from(event))
     return jsonified_events
+
+
+def delete_user(nickname):
+    session.query(User).filter(User.nickname == nickname).delete()
